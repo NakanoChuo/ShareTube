@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+<body>
+    <h1 id="room"></h1>
+    <ul id="users"></ul>
+    <ul id="messages"></ul>
+    <form name="chat">
+        <input type="text" name="message">
+    </form>
+    
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        var roomName = location.href.split('/').pop();
+        var userName = '';
+        var isEntered = false;
+
+        document.forms['chat'].onsubmit = ()=>{
+            socket.emit('chat_from_client', {
+                msg: document.forms['chat'].elements['message'].value,
+            })
+            return false;
+        };
+
+        document.getElementById('room').textContent = roomName;
+        socket.emit('enter_room_from_client', {
+            roomName: roomName
+        });
+
+        socket.on('enter_room_from_server', (data)=>{
+            if (!isEntered) {
+                userName = data.userName;
+                isEntered = true;
+                addMessage(`You've entered as ${userName}. ---${data.time}`);
+            } else {
+                addMessage(`${data.msg} ---${data.time}`);
+            }
+            updateUsers(data.users);
+        });
+
+        socket.on('chat_from_server', (data)=>{
+            addMessage(`${data.userName}:${data.msg} ---${data.time}`);
+        })
+
+        socket.on('leave_room_from_server', (data)=>{
+            updateUsers(data.users);
+            addMessage(`${data.msg} ---${data.time}`);
+        })
+
+        function addMessage(msg) {
+            var ul = document.getElementById('messages');
+            addList(ul, msg);
+        }
+
+        function updateUsers(users) {
+            var ul = document.getElementById('users');
+            while(ul.firstChild) { ul.removeChild(ul.firstChild); }
+            users.forEach((user)=>{
+                addList(ul, user);
+            });
+        }
+
+        function addList(ul, text) {
+            var li = document.createElement('li');
+            li.appendChild(document.createTextNode(text));
+            ul.appendChild(li);
+            return li;
+        }
+    </script>
+</body>
+</html>
