@@ -13,12 +13,18 @@ var Socket = function() {
             this.userName = data.userName;
             this.isEntered = true;
             addMessage(`You've entered as ${this.userName}. ---${data.time}`);
+            onEnterRoom(data);
         } else {
             addMessage(`${data.msg} ---${data.time}`);
         }
-        this.roommateCount = data.roommateCount;
         updateUsers(data.users);
-        onEnterRoom(data);
+    });
+
+    this.socket.on('video_info_from_server', (data)=>{
+        this.socket.emit('video_info_from_client', {
+            videoId: getVideoId(),
+            seekTime: getCurrentTime(),
+        });
     });
     
     this.socket.on('control_video_from_server', (data)=>{

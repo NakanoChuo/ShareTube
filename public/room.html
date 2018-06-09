@@ -37,21 +37,12 @@
         }
 
         function onEnterRoom(event) {
-            document.getElementById('play_pause_button').addEventListener('click', function() {
-                if (player.isPlaying()) {
-                    player.pause();
-                    socket.sendPause();
-                } else {
-                    player.play();
-                    socket.sendPlay();
-                }
-            }, false);
+            console.log(event.videoId, event.seekTime);
+            player.frame.loadVideoById(event.videoId, event.seekTime);
+
+            document.getElementById('play_pause_button').addEventListener('click', onClickPlayPauseButton, false);
     
-            document.getElementById('seekbar').addEventListener('mouseup', function() {
-                var seekTime = getSeekbarValue() * player.frame.getDuration() / 100;
-                player.frame.seekTo(seekTime, true);
-                socket.sendSeek(seekTime);
-            }, false);
+            document.getElementById('seekbar').addEventListener('mouseup', onSlideSeekbar, false);
 
             document.forms['chat'].onsubmit = function() {
                 socket.sendMessage(
@@ -67,12 +58,28 @@
             }, 1000);
         }
 
+        function onClickPlayPauseButton() {
+            if (player.isPlaying()) {   // ボタン操作による停止
+                player.pause();
+                socket.sendPause();
+            } else {                    // ボタン操作による再生
+                player.play();
+                socket.sendPlay();
+            }
+        }
+
+        function onSlideSeekbar() {
+            var seekTime = getSeekbarValue() * player.frame.getDuration() / 100;
+            player.frame.seekTo(seekTime, true);
+            socket.sendSeek(seekTime);
+        }
+        
         function onChangeOthersPlayerState(event) {
             switch (event.type) {
-                case 'play':
+                case 'play':            // 他のユーザによる再生
                     player.play();
                     break;
-                case 'pause':
+                case 'pause':           // 他のユーザによる停止
                     player.pause();
                     break;
                 case 'seek':
@@ -81,20 +88,24 @@
             }
         }
         
-        function onPlay() {
-            document.getElementById('play_pause_button').textContent = '停止';
-        }
-        
-        function onPause() {
-            document.getElementById('play_pause_button').textContent = '再生';
-        }
-        
+        // 動画画面クリックによる再生
         function onPlayWithTouchingFrame() {
             socket.sendPlay();
         }
         
+        // 動画画面クリックによる停止
         function onPauseWithTouchingFrame() {
             socket.sendPause();
+        }
+        
+        // どの方法で再生したかによらない共通の動作
+        function onPlay() {
+            document.getElementById('play_pause_button').textContent = '停止';
+        }
+        
+        // どの方法で停止したかによらない共通の動作
+        function onPause() {
+            document.getElementById('play_pause_button').textContent = '再生';
         }
 
         function getRoomName() {
@@ -103,6 +114,25 @@
 
         function getSeekbarValue() {
             return document.getElementById('seekbar').value;
+        }
+
+        function getVideoId() {
+            return getUrlVar(player.frame.getVideoUrl())['v'];
+        }
+
+        function getUrlVar(url) {
+            var ret = {};
+            var query = url.split('?')[1];
+            query.split('&').forEach((q)=>{
+                let k = q.split('=')[0];
+                let v = q.split('=')[1];
+                ret[k] = v;
+            });
+            return ret;
+        }
+
+        function getCurrentTime() {
+            return player.frame.getCurrentTime();
         }
 
         function setPlayTime(current, total) {
@@ -121,7 +151,7 @@
             var ul = document.getElementById('users');
             while(ul.firstChild) { ul.removeChild(ul.firstChild); }
             users.forEach((user)=>{
-                addList(ul, user);
+                addList(ul, user.name);
             });
         }
 

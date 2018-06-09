@@ -37,23 +37,44 @@ app.get('/rooms/:roomName', (req, res)=>{
 io.on('connection', (socket)=>{
     var roomName = '';
     var userName = '';
+    const defaultVideoId = 'unYdvA_8RgU';
 
     socket.on('enter_room_from_client', (data)=>{
         if (data.roomName in rooms) {
             roomName = data.roomName;
             userName = `User-${Math.random().toString(36).slice(-5)}${rooms[roomName].users.length}`;
-            rooms[roomName].users.push(userName);
+            rooms[roomName].users.push({
+                name: userName,
+                socketId: socket.id,
+            });
 
             socket.join(roomName);
-
             console.log(`${userName} has entered in ${roomName}.`);
-            io.to(roomName).emit('enter_room_from_server', {
-                date: new Date().toLocaleTimeString(),
-                msg: `${userName} has entered.`,
-                userName: userName,
-                users: rooms[roomName].users,
-            });
+
+            if (rooms[roomName].users.length > 1) {
+                io.to(rooms[roomName].users[0].socketId).emit('video_info_from_server', {});
+            } else {
+                io.to(roomName).emit('enter_room_from_server', {
+                    time: new Date().toLocaleTimeString(),
+                    msg: `${userName} has entered.`,
+                    userName: userName,
+                    users: rooms[roomName].users,
+                    videoId: defaultVideoId,
+                    seekTime: 0,
+                });
+            }
         }
+    });
+
+    socket.on('video_info_from_client', (data)=>{
+        io.to(roomName).emit('enter_room_from_server', {
+            time: new Date().toLocaleTimeString(),
+            msg: `${userName} has entered.`,
+            userName: userName,
+            users: rooms[roomName].users,
+            videoId: data.videoId,
+            seekTime: data.seekTime,
+        })
     });
 
     socket.on('control_video_from_client', (data)=>{
@@ -63,7 +84,7 @@ io.on('connection', (socket)=>{
 
     socket.on('chat_from_client', (data)=>{
         io.to(roomName).emit('chat_from_server', {
-            date: new Date().toLocaleTimeString(),
+            time: new Date().toLocaleTimeString(),
             msg: data.msg,
             userName: userName,
         });
@@ -75,13 +96,13 @@ io.on('connection', (socket)=>{
         } else {
             console.log(`${userName} has leaved in ${roomName}.`);
 
-            rooms[roomName].users.splice(rooms[roomName].users.indexOf(userName), 1);
+            //rooms[roomName].users.splice(rooms[roomName].users.indexOf(userName), 1);
             if (rooms[roomName].users.length == 0) {
                 console.log(`Deleted room:${roomName}`);
                 delete rooms[roomName];
             } else {
                 io.to(roomName).emit('leave_room_from_server', {
-                    date: new Date().toLocaleTimeString(),
+                    time: new Date().toLocaleTimeString(),
                     msg: `${userName} has leaved.`,
                     userName: userName,
                     users: rooms[roomName].users,
