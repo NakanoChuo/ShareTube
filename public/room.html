@@ -17,19 +17,26 @@
     </form>
 
     <div id="player"></div>
-    <button id="play_pause_button">再生</button>
+    <div id="controller">
+        <input id="seekbar" type="range" value="0">
+        <button id="play_pause_button">再生</button>
+        <time id="playtime">00:00:00/00:00:00</time>
+        <input id="volume" type="range" value="0">
+    </div>
     <script src="https://www.youtube.com/iframe_api"></script>
     <script src="/player.js"></script>
     <script>
         var player;
         var socket;
 
-        document.getElementById('room').innerText = getRoomName();
+        document.getElementById('room').textContent = getRoomName();
 
         function onPlayerReady(event) {
             player = new Player(event.target);            
             socket = new Socket();
-    
+        }
+
+        function onEnterRoom(event) {
             document.getElementById('play_pause_button').addEventListener('click', function() {
                 if (player.isPlaying()) {
                     player.pause();
@@ -40,12 +47,24 @@
                 }
             }, false);
     
+            document.getElementById('seekbar').addEventListener('mouseup', function() {
+                var seekTime = getSeekbarValue() * player.frame.getDuration() / 100;
+                player.frame.seekTo(seekTime, true);
+                socket.sendSeek(seekTime);
+            }, false);
+
             document.forms['chat'].onsubmit = function() {
                 socket.sendMessage(
                     document.forms['chat'].elements['message'].value
                 );
                 return false;
             };
+
+            setInterval(function() {
+                if (player.isPlaying()) {
+                    setPlayTime(player.frame.getCurrentTime(), player.frame.getDuration());
+                }
+            }, 1000);
         }
 
         function onChangeOthersPlayerState(event) {
@@ -56,27 +75,41 @@
                 case 'pause':
                     player.pause();
                     break;
+                case 'seek':
+                    player.frame.seekTo(event.data);
+                    break;
             }
         }
         
         function onPlay() {
-            document.getElementById('play_pause_button').innerText = '停止';
+            document.getElementById('play_pause_button').textContent = '停止';
         }
-    
+        
         function onPause() {
-            document.getElementById('play_pause_button').innerText = '再生';
+            document.getElementById('play_pause_button').textContent = '再生';
         }
-    
+        
         function onPlayWithTouchingFrame() {
             socket.sendPlay();
         }
-    
+        
         function onPauseWithTouchingFrame() {
             socket.sendPause();
         }
 
         function getRoomName() {
             return location.href.split('/').pop();
+        }
+
+        function getSeekbarValue() {
+            return document.getElementById('seekbar').value;
+        }
+
+        function setPlayTime(current, total) {
+            var currentStr = Math.floor(current/3600) + ':' + Math.floor(current%3600/60) + ':' + Math.floor(current%60);
+            var totalStr = Math.floor(total/3600) + ':' + Math.floor(total%3600/60) + ':' + Math.floor(total%60);
+            document.getElementById('playtime').textContent = currentStr + '/' + totalStr;
+            document.getElementById('seekbar').value = current / total * 100;
         }
 
         function addMessage(msg) {

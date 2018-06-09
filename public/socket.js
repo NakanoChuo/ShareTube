@@ -16,7 +16,9 @@ var Socket = function() {
         } else {
             addMessage(`${data.msg} ---${data.time}`);
         }
+        this.roommateCount = data.roommateCount;
         updateUsers(data.users);
+        onEnterRoom(data);
     });
     
     this.socket.on('control_video_from_server', (data)=>{
@@ -44,6 +46,13 @@ Socket.prototype.sendPlay = function() {
 Socket.prototype.sendPause = function() {
     this.socket.emit('control_video_from_client', {
         type: 'pause',
+    })
+}
+
+Socket.prototype.sendSeek = function (seekTime) {
+    this.socket.emit('control_video_from_client', {
+        type: 'seek',
+        data: seekTime,
     })
 }
 

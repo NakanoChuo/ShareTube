@@ -57,10 +57,8 @@ io.on('connection', (socket)=>{
     });
 
     socket.on('control_video_from_client', (data)=>{
-        io.to(roomName).emit('control_video_from_server', {
-            type: data.type,
-            userName: userName,
-        })
+        data.userName = userName;
+        io.to(roomName).emit('control_video_from_server', data);
     });
 
     socket.on('chat_from_client', (data)=>{
