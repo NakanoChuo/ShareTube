@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>Document</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/socket.js"></script>
 </head>
 <body>
     <h1 id="room"></h1>
@@ -15,66 +17,67 @@
     </form>
 
     <div id="player"></div>
+    <button id="play_pause_button">再生</button>
     <script src="https://www.youtube.com/iframe_api"></script>
+    <script src="/player.js"></script>
     <script>
         var player;
-        function onYouTubeIframeAPIReady() {
-            player = new YT.Player('player', {
-                height: '315',
-                width: '560',
-                videoId: 'ZxnRp4p9SGk',
-                events: {
-                    'onStateChange': onPlayerStateChange,
-                },
-                playerVars: {
-                    controls: 0,
-                }
-            });
-        }
+        var socket;
 
-        function onPlayerStateChange(event) {
-            console.log(event.data);
-        }
-    </script>
+        document.getElementById('room').innerText = getRoomName();
+
+        function onPlayerReady(event) {
+            player = new Player(event.target);            
+            socket = new Socket();
     
-    <script src="/socket.io/socket.io.js"></script>
-    <script>
-        const socket = io();
-        var roomName = location.href.split('/').pop();
-        var userName = '';
-        var isEntered = false;
+            document.getElementById('play_pause_button').addEventListener('click', function() {
+                if (player.isPlaying()) {
+                    player.pause();
+                    socket.sendPause();
+                } else {
+                    player.play();
+                    socket.sendPlay();
+                }
+            }, false);
+    
+            document.forms['chat'].onsubmit = function() {
+                socket.sendMessage(
+                    document.forms['chat'].elements['message'].value
+                );
+                return false;
+            };
+        }
 
-        document.forms['chat'].onsubmit = ()=>{
-            socket.emit('chat_from_client', {
-                msg: document.forms['chat'].elements['message'].value,
-            })
-            return false;
-        };
-
-        document.getElementById('room').textContent = roomName;
-        socket.emit('enter_room_from_client', {
-            roomName: roomName
-        });
-
-        socket.on('enter_room_from_server', (data)=>{
-            if (!isEntered) {
-                userName = data.userName;
-                isEntered = true;
-                addMessage(`You've entered as ${userName}. ---${data.time}`);
-            } else {
-                addMessage(`${data.msg} ---${data.time}`);
+        function onChangeOthersPlayerState(event) {
+            switch (event.type) {
+                case 'play':
+                    player.play();
+                    break;
+                case 'pause':
+                    player.pause();
+                    break;
             }
-            updateUsers(data.users);
-        });
+        }
+        
+        function onPlay() {
+            document.getElementById('play_pause_button').innerText = '停止';
+        }
+    
+        function onPause() {
+            document.getElementById('play_pause_button').innerText = '再生';
+        }
+    
+        function onPlayWithTouchingFrame() {
+            socket.sendPlay();
+        }
+    
+        function onPauseWithTouchingFrame() {
+            socket.sendPause();
+        }
 
-        socket.on('chat_from_server', (data)=>{
-            addMessage(`${data.userName}:${data.msg} ---${data.time}`);
-        })
-
-        socket.on('leave_room_from_server', (data)=>{
-            updateUsers(data.users);
-            addMessage(`${data.msg} ---${data.time}`);
-        })
+        function getRoomName() {
+            return location.href.split('/').pop();
+        }
 
         function addMessage(msg) {
             var ul = document.getElementById('messages');

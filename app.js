@@ -8,7 +8,7 @@ const port = process.env.PORT || 3000;
 var rooms = {};
 
 
-app.use('/', express.static(__dirname));
+app.use('/', express.static(`${__dirname}/public`));
 
 app.get('/', (req, res)=>{
     res.sendFile(`${__dirname}/public/index.html`);
@@ -54,6 +54,13 @@ io.on('connection', (socket)=>{
                 users: rooms[roomName].users,
             });
         }
+    });
+
+    socket.on('control_video_from_client', (data)=>{
+        io.to(roomName).emit('control_video_from_server', {
+            type: data.type,
+            userName: userName,
+        })
     });
 
     socket.on('chat_from_client', (data)=>{
