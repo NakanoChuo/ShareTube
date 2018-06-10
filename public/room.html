@@ -21,13 +21,39 @@
         <input id="seekbar" type="range" value="0">
         <button id="play_pause_button">再生</button>
         <time id="playtime">00:00:00/00:00:00</time>
-        <input id="volume" type="range">
+        <input id="volume" type="range" value="100">
+    </div>
+    <div id="playlist">
+        <form name="add_video">
+            <input type="text" name="videoUrl">
+            <button type="submit">+</button>
+        </form>
+        <template id="playlist_item_template">
+            <div class="playlist_item">
+                <div class="video_info">
+                    <img src="">
+                </div>
+                <button>×</button>
+            </div>
+        </template>
     </div>
     <script src="https://www.youtube.com/iframe_api"></script>
     <script src="/player.js"></script>
     <script>
         var player;
         var socket;
+        var playlist = [];
+        playlist.now = -1;
+
+        var testPlaylist = [
+            {
+                id: 'pKbPKxlh3Yo',
+            },
+            {
+                id: 'cjio2Yrim4w',
+            },
+        ];
+        testPlaylist.now = -1;
 
         document.getElementById('room').textContent = getRoomName();
 
@@ -38,8 +64,9 @@
         }
 
         function onEnterRoom(event) {
-            console.log(event.videoId, event.seekTime);
-            player.frame.loadVideoById(event.videoId, event.seekTime);
+            player.load(event.videoId, event.seekTime);
+
+            updatePlaylist(/*event.playlist*/testPlaylist);
 
             document.getElementById('play_pause_button').addEventListener('click', onClickPlayPauseButton, false);
     
@@ -48,6 +75,8 @@
             document.getElementById('volume').addEventListener('input', onChangeVolume, false);
 
             document.forms['chat'].onsubmit = onSubmitChatMessage;
+
+            document.forms['add_video'].onsubmit = onSubmitAddVideo;
 
             setInterval(function() {
                 if (player.isPlaying()) {
@@ -109,10 +138,47 @@
         function onPause() {
             document.getElementById('play_pause_button').textContent = '再生';
         }
+
+        function onFinish() {
+            var len = playlist.length;
+            var now = playlist.now;
+            if (len > 0) {
+                if (now < 0) {
+                    markPlaylist(0);
+                    player.load(playlist[0].id, 0);
+                } else if(now < len - 1) {
+                    markPlaylist(now + 1);
+                    player.load(playlist[now + 1].id, 0);
+                }
+            }
+        }
+
+        function onClickDeleteButtonInPlaylist(event) {
+            var index = Array.from(document.querySelectorAll('.playlist_item>button')).indexOf(event.target);
+            playlist.splice(index, 1);
+            var videoInfo = event.target.parentNode;
+            videoInfo.parentNode.removeChild(videoInfo);
+
+            if (index == playlist.now) {
+                markPlaylist(-1);
+            }
+        }
+
+        function onClickVideoInfo(event) {
+            var index = Array.from(document.getElementsByClassName('video_info')).indexOf(event.currentTarget);
+            markPlaylist(index);
+            player.load(playlist[playlist.now].id, 0);
+        }
         
-        function onSubmitChatMessage() {
+        function onSubmitAddVideo(event) {
+            var videoId = getUrlVar(event.target.elements['videoUrl'].value)['v'];
+            addVideoInfoInPlaylist(getVideoInfo(videoId));
+            return false;
+        }
+
+        function onSubmitChatMessage(event) {
             socket.sendMessage(
-                document.forms['chat'].elements['message'].value
+                event.target.elements['message'].value
             );
             return false;
         };
@@ -145,6 +211,46 @@
             var totalStr = Math.floor(total/3600) + ':' + Math.floor(total%3600/60) + ':' + Math.floor(total%60);
             document.getElementById('playtime').textContent = currentStr + '/' + totalStr;
             document.getElementById('seekbar').value = current / total * 100;
+        }
+
+        function updatePlaylist(newPlaylist) {
+            var videoInfos = Array.from(document.getElementsByClassName('video_info'));
+            videoInfos.forEach((videoInfo)=>{
+                videoInfo.parentNode.removeChild(videoInfo);
+            });
+
+            newPlaylist.forEach(addVideoInfoInPlaylist);
+            markPlaylist(newPlaylist.now);
+        }
+
+        function markPlaylist(index) {
+            playlist.now = index;
+            var videoInfos = Array.from(document.getElementsByClassName('video_info'));
+            videoInfos.forEach((videoInfo)=>{
+                videoInfo.classList.remove('playing');
+            });
+            if (playlist.now >= 0) {
+                videoInfos[playlist.now].classList.add('playing');
+            }
+        }
+
+        function addVideoInfoInPlaylist(videoInfo) {
+            var div = document.getElementById('playlist');
+            var t = document.getElementById('playlist_item_template');
+
+            var clone = document.importNode(t.content, true);
+            clone.querySelector('img').src = `http://img.youtube.com/vi/${videoInfo.id}/default.jpg`;
+            clone.querySelector('button').addEventListener('click', onClickDeleteButtonInPlaylist, false);
+            clone.querySelector('.video_info').addEventListener('click', onClickVideoInfo, false);
+
+            playlist.push(videoInfo);
+            div.appendChild(clone);
+        }
+
+        function getVideoInfo(id) {
+            return {
+                id: id,
+            };
         }
 
         function addMessage(msg) {

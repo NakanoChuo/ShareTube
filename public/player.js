@@ -13,6 +13,11 @@ Player.prototype.pause = function() {
     this.frame.pauseVideo();
 };
 
+Player.prototype.load = function(videoId, seekTime) {
+    isPlaying = true;
+    player.frame.loadVideoById(videoId, seekTime);
+}
+
 Player.prototype.isPlaying = function() {
     return isPlaying;
 };
@@ -38,6 +43,7 @@ function onPlayerStateChange(event) {
         case -1:    // 再生前
             break;
         case YT.PlayerState.ENDED:
+            onFinish();
             break;
         case YT.PlayerState.PLAYING:
             if (!isPlaying) {
