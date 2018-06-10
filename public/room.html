@@ -21,7 +21,7 @@
         <input id="seekbar" type="range" value="0">
         <button id="play_pause_button">再生</button>
         <time id="playtime">00:00:00/00:00:00</time>
-        <input id="volume" type="range" value="0">
+        <input id="volume" type="range">
     </div>
     <script src="https://www.youtube.com/iframe_api"></script>
     <script src="/player.js"></script>
@@ -34,6 +34,7 @@
         function onPlayerReady(event) {
             player = new Player(event.target);            
             socket = new Socket();
+            player.frame.setVolume(document.getElementById('volume').value);
         }
 
         function onEnterRoom(event) {
@@ -44,12 +45,9 @@
     
             document.getElementById('seekbar').addEventListener('mouseup', onSlideSeekbar, false);
 
-            document.forms['chat'].onsubmit = function() {
-                socket.sendMessage(
-                    document.forms['chat'].elements['message'].value
-                );
-                return false;
-            };
+            document.getElementById('volume').addEventListener('input', onChangeVolume, false);
+
+            document.forms['chat'].onsubmit = onSubmitChatMessage;
 
             setInterval(function() {
                 if (player.isPlaying()) {
@@ -58,7 +56,7 @@
             }, 1000);
         }
 
-        function onClickPlayPauseButton() {
+        function onClickPlayPauseButton(event) {
             if (player.isPlaying()) {   // ボタン操作による停止
                 player.pause();
                 socket.sendPause();
@@ -68,12 +66,16 @@
             }
         }
 
-        function onSlideSeekbar() {
-            var seekTime = getSeekbarValue() * player.frame.getDuration() / 100;
+        function onSlideSeekbar(event) {
+            var seekTime = event.target.value * player.frame.getDuration() / 100;
             player.frame.seekTo(seekTime, true);
             socket.sendSeek(seekTime);
         }
         
+        function onChangeVolume(event) {
+            player.frame.setVolume(event.target.value);
+        }
+
         function onChangeOthersPlayerState(event) {
             switch (event.type) {
                 case 'play':            // 他のユーザによる再生
@@ -107,13 +109,16 @@
         function onPause() {
             document.getElementById('play_pause_button').textContent = '再生';
         }
-
+        
+        function onSubmitChatMessage() {
+            socket.sendMessage(
+                document.forms['chat'].elements['message'].value
+            );
+            return false;
+        };
+        
         function getRoomName() {
             return location.href.split('/').pop();
-        }
-
-        function getSeekbarValue() {
-            return document.getElementById('seekbar').value;
         }
 
         function getVideoId() {
