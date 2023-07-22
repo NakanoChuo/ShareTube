@@ -13,9 +13,14 @@ Player.prototype.pause = function() {
     this.frame.pauseVideo();
 };
 
-Player.prototype.load = function(videoId, seekTime) {
-    isPlaying = true;
-    player.frame.loadVideoById(videoId, seekTime);
+Player.prototype.load = function(videoId, seekTime, play) {
+    if (play) {
+        isPlaying = true;
+        player.frame.loadVideoById(videoId, seekTime);
+    } else {
+        isPlaying = false;
+        player.frame.cueVideoById(videoId, seekTime);
+    }
 }
 
 Player.prototype.isPlaying = function() {
@@ -24,8 +29,8 @@ Player.prototype.isPlaying = function() {
 
 function onYouTubeIframeAPIReady() {
     new YT.Player('player', {
-        height: '315',
-        width: '560',
+        height: '400',
+        width: '575',
         videoId: '',
         events: {
             'onReady': onPlayerReady,

@@ -5,273 +5,82 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>Document</title>
+    <link href="https://use.fontawesome.com/releases/v5.0.6/css/all.css" rel="stylesheet">
+    <link rel="stylesheet" type="text/css" href="/room.css">
     <script src="/socket.io/socket.io.js"></script>
     <script src="/socket.js"></script>
+    <script src="/slider.js"></script>
 </head>
 <body>
-    <h1 id="room"></h1>
-    <ul id="users"></ul>
-    <ul id="messages"></ul>
-    <form name="chat">
-        <input type="text" name="message">
-    </form>
-
-    <div id="player"></div>
-    <div id="controller">
-        <input id="seekbar" type="range" value="0">
-        <button id="play_pause_button">再生</button>
-        <time id="playtime">00:00:00/00:00:00</time>
-        <input id="volume" type="range" value="100">
-    </div>
-    <div id="playlist">
-        <form name="add_video">
-            <input type="text" name="videoUrl">
-            <button type="submit">+</button>
-        </form>
-        <template id="playlist_item_template">
-            <div class="playlist_item">
-                <div class="video_info">
-                    <img src="">
+    <!--<header>
+        SHARE TUBE
+    </header>-->
+    <div id="main">
+        <div id="player_box">
+            <div id="player"></div>
+            <div id="controller">
+                <div id="seekbar" class="slider">
+                    <div></div>
+                    <button></button>
                 </div>
-                <button>×</button>
+                <button id="play_pause_button"></button>
+                <time id="playtime">0:00:00/0:00:00</time>
+                <button id="mute_button"></button>
+                <div id="volume" class="slider">
+                    <button></button>
+                </div>
             </div>
-        </template>
-    </div>
-    <script src="https://www.youtube.com/iframe_api"></script>
-    <script src="/player.js"></script>
-    <script>
-        var player;
-        var socket;
-        var playlist = [];
-        playlist.now = -1;
-
-        var testPlaylist = [
-            {
-                id: 'pKbPKxlh3Yo',
-            },
-            {
-                id: 'cjio2Yrim4w',
-            },
-        ];
-        testPlaylist.now = -1;
-
-        document.getElementById('room').textContent = getRoomName();
-
-        function onPlayerReady(event) {
-            player = new Player(event.target);            
-            socket = new Socket();
-            player.frame.setVolume(document.getElementById('volume').value);
-        }
-
-        function onEnterRoom(event) {
-            player.load(event.videoId, event.seekTime);
-
-            updatePlaylist(/*event.playlist*/testPlaylist);
-
-            document.getElementById('play_pause_button').addEventListener('click', onClickPlayPauseButton, false);
+        </div>
     
-            document.getElementById('seekbar').addEventListener('mouseup', onSlideSeekbar, false);
-
-            document.getElementById('volume').addEventListener('input', onChangeVolume, false);
-
-            document.forms['chat'].onsubmit = onSubmitChatMessage;
-
-            document.forms['add_video'].onsubmit = onSubmitAddVideo;
-
-            setInterval(function() {
-                if (player.isPlaying()) {
-                    setPlayTime(player.frame.getCurrentTime(), player.frame.getDuration());
-                }
-            }, 1000);
-        }
-
-        function onClickPlayPauseButton(event) {
-            if (player.isPlaying()) {   // ボタン操作による停止
-                player.pause();
-                socket.sendPause();
-            } else {                    // ボタン操作による再生
-                player.play();
-                socket.sendPlay();
-            }
-        }
-
-        function onSlideSeekbar(event) {
-            var seekTime = event.target.value * player.frame.getDuration() / 100;
-            player.frame.seekTo(seekTime, true);
-            socket.sendSeek(seekTime);
-        }
+        <div id="tabs_container">
+            <div class="tabs">
+                <label for="playlist" class="selected">Playlist</label>
+                <label for="history">History</label>
+            </div>
+            <div id="playlist" class="item selected">
+                <form name="add_video" autocomplete="off">
+                    <input type="text" name="videoUrl" placeholder="Paste link to playlist or video">
+                    <button type="submit">+</button>
+                </form>
+                <template id="playlist_item_template">
+                    <div class="videolist_item">
+                        <div class="video_info">
+                            <img src="">
+                        </div>
+                        <button>×</button>
+                    </div>
+                </template>
+            </div>
+            <div id="history" class="item">
+                <template id="history_item_template">
+                    <div class="videolist_item">
+                        <div class="video_info">
+                            <img src="">
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+    
+        <div id="room_info">
+            <ul id="users"></ul>
+            <div id="messages">
+                <template id="message_info_template">
+                    <div class="message_info">
+                        <p class="message"></p>
+                        <p class="username"></p>
+                        <p class="timestamp"></p>
+                    </div>
+                </template>
+            </div>
+            <form name="chat" autocomplete="off">
+                <input type="text" name="message" placeholder="Type your message here...">
+            </form>
+        </div>
         
-        function onChangeVolume(event) {
-            player.frame.setVolume(event.target.value);
-        }
-
-        function onChangeOthersPlayerState(event) {
-            switch (event.type) {
-                case 'play':            // 他のユーザによる再生
-                    player.play();
-                    break;
-                case 'pause':           // 他のユーザによる停止
-                    player.pause();
-                    break;
-                case 'seek':
-                    player.frame.seekTo(event.data);
-                    break;
-            }
-        }
-        
-        // 動画画面クリックによる再生
-        function onPlayWithTouchingFrame() {
-            socket.sendPlay();
-        }
-        
-        // 動画画面クリックによる停止
-        function onPauseWithTouchingFrame() {
-            socket.sendPause();
-        }
-        
-        // どの方法で再生したかによらない共通の動作
-        function onPlay() {
-            document.getElementById('play_pause_button').textContent = '停止';
-        }
-        
-        // どの方法で停止したかによらない共通の動作
-        function onPause() {
-            document.getElementById('play_pause_button').textContent = '再生';
-        }
-
-        function onFinish() {
-            var len = playlist.length;
-            var now = playlist.now;
-            if (len > 0) {
-                if (now < 0) {
-                    markPlaylist(0);
-                    player.load(playlist[0].id, 0);
-                } else if(now < len - 1) {
-                    markPlaylist(now + 1);
-                    player.load(playlist[now + 1].id, 0);
-                }
-            }
-        }
-
-        function onClickDeleteButtonInPlaylist(event) {
-            var index = Array.from(document.querySelectorAll('.playlist_item>button')).indexOf(event.target);
-            playlist.splice(index, 1);
-            var videoInfo = event.target.parentNode;
-            videoInfo.parentNode.removeChild(videoInfo);
-
-            if (index == playlist.now) {
-                markPlaylist(-1);
-            }
-        }
-
-        function onClickVideoInfo(event) {
-            var index = Array.from(document.getElementsByClassName('video_info')).indexOf(event.currentTarget);
-            markPlaylist(index);
-            player.load(playlist[playlist.now].id, 0);
-        }
-        
-        function onSubmitAddVideo(event) {
-            var videoId = getUrlVar(event.target.elements['videoUrl'].value)['v'];
-            addVideoInfoInPlaylist(getVideoInfo(videoId));
-            return false;
-        }
-
-        function onSubmitChatMessage(event) {
-            socket.sendMessage(
-                event.target.elements['message'].value
-            );
-            return false;
-        };
-        
-        function getRoomName() {
-            return location.href.split('/').pop();
-        }
-
-        function getVideoId() {
-            return getUrlVar(player.frame.getVideoUrl())['v'];
-        }
-
-        function getUrlVar(url) {
-            var ret = {};
-            var query = url.split('?')[1];
-            query.split('&').forEach((q)=>{
-                let k = q.split('=')[0];
-                let v = q.split('=')[1];
-                ret[k] = v;
-            });
-            return ret;
-        }
-
-        function getCurrentTime() {
-            return player.frame.getCurrentTime();
-        }
-
-        function setPlayTime(current, total) {
-            var currentStr = Math.floor(current/3600) + ':' + Math.floor(current%3600/60) + ':' + Math.floor(current%60);
-            var totalStr = Math.floor(total/3600) + ':' + Math.floor(total%3600/60) + ':' + Math.floor(total%60);
-            document.getElementById('playtime').textContent = currentStr + '/' + totalStr;
-            document.getElementById('seekbar').value = current / total * 100;
-        }
-
-        function updatePlaylist(newPlaylist) {
-            var videoInfos = Array.from(document.getElementsByClassName('video_info'));
-            videoInfos.forEach((videoInfo)=>{
-                videoInfo.parentNode.removeChild(videoInfo);
-            });
-
-            newPlaylist.forEach(addVideoInfoInPlaylist);
-            markPlaylist(newPlaylist.now);
-        }
-
-        function markPlaylist(index) {
-            playlist.now = index;
-            var videoInfos = Array.from(document.getElementsByClassName('video_info'));
-            videoInfos.forEach((videoInfo)=>{
-                videoInfo.classList.remove('playing');
-            });
-            if (playlist.now >= 0) {
-                videoInfos[playlist.now].classList.add('playing');
-            }
-        }
-
-        function addVideoInfoInPlaylist(videoInfo) {
-            var div = document.getElementById('playlist');
-            var t = document.getElementById('playlist_item_template');
-
-            var clone = document.importNode(t.content, true);
-            clone.querySelector('img').src = `http://img.youtube.com/vi/${videoInfo.id}/default.jpg`;
-            clone.querySelector('button').addEventListener('click', onClickDeleteButtonInPlaylist, false);
-            clone.querySelector('.video_info').addEventListener('click', onClickVideoInfo, false);
-
-            playlist.push(videoInfo);
-            div.appendChild(clone);
-        }
-
-        function getVideoInfo(id) {
-            return {
-                id: id,
-            };
-        }
-
-        function addMessage(msg) {
-            var ul = document.getElementById('messages');
-            addList(ul, msg);
-        }
-
-        function updateUsers(users) {
-            var ul = document.getElementById('users');
-            while(ul.firstChild) { ul.removeChild(ul.firstChild); }
-            users.forEach((user)=>{
-                addList(ul, user.name);
-            });
-        }
-
-        function addList(ul, text) {
-            var li = document.createElement('li');
-            li.appendChild(document.createTextNode(text));
-            ul.appendChild(li);
-            return li;
-        }
-    </script>
+        <script src="https://www.youtube.com/iframe_api"></script>
+        <script src="/player.js"></script>
+        <script src="/room.js"></script>
+    </div>
 </body>
 </html>

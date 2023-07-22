@@ -37,7 +37,7 @@ app.get('/rooms/:roomName', (req, res)=>{
 io.on('connection', (socket)=>{
     var roomName = '';
     var userName = '';
-    const defaultVideoId = 'unYdvA_8RgU';
+    const defaultVideoId = 'unYdvA_8RgU';//'TIfAkOBMf5A';
 
     socket.on('enter_room_from_client', (data)=>{
         if (data.roomName in rooms) {
@@ -52,34 +52,47 @@ io.on('connection', (socket)=>{
             console.log(`${userName} has entered in ${roomName}.`);
 
             if (rooms[roomName].users.length > 1) {
-                io.to(rooms[roomName].users[0].socketId).emit('video_info_from_server', {});
+                io.to(rooms[roomName].users[0].socketId).emit('player_info_from_server', {
+                    newUserName: userName,
+                });
             } else {
                 io.to(roomName).emit('enter_room_from_server', {
                     time: new Date().toLocaleTimeString(),
                     msg: `${userName} has entered.`,
                     userName: userName,
                     users: rooms[roomName].users,
+                    isPlaying: true,
                     videoId: defaultVideoId,
                     seekTime: 0,
+                    playlist: [],
+                    playingIndex: -1,
                 });
             }
         }
     });
 
-    socket.on('video_info_from_client', (data)=>{
+    socket.on('player_info_from_client', (data)=>{
         io.to(roomName).emit('enter_room_from_server', {
             time: new Date().toLocaleTimeString(),
-            msg: `${userName} has entered.`,
-            userName: userName,
+            msg: `${data.newUserName} has entered.`,
+            userName: data.newUserName,
             users: rooms[roomName].users,
+            isPlaying: data.isPlaying,
             videoId: data.videoId,
             seekTime: data.seekTime,
+            playlist: data.playlist,
+            playingIndex: data.playingIndex,
         })
     });
 
     socket.on('control_video_from_client', (data)=>{
         data.userName = userName;
         io.to(roomName).emit('control_video_from_server', data);
+    });
+
+    socket.on('update_playlist_from_client', (data)=>{
+        data.userName = userName;
+        io.to(roomName).emit('update_playlist_from_server', data);
     });
 
     socket.on('chat_from_client', (data)=>{
@@ -95,8 +108,11 @@ io.on('connection', (socket)=>{
             console.log('Unknown user has disconnected without entering.');
         } else {
             console.log(`${userName} has leaved in ${roomName}.`);
-
-            //rooms[roomName].users.splice(rooms[roomName].users.indexOf(userName), 1);
+            rooms[roomName].users.splice(
+                rooms[roomName].users.findIndex(
+                    (user)=>{ return user.name == userName; }
+                ), 1);
+            
             if (rooms[roomName].users.length == 0) {
                 console.log(`Deleted room:${roomName}`);
                 delete rooms[roomName];

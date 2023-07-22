@@ -1,0 +1,322 @@
+body {
+    /*margin: 0;*/
+    padding: 0;
+    background-color: white;
+}
+
+header {
+    padding: 1rem 0.5rem;
+    font-size: 2rem;
+    font-family: "Impact";
+    color: white;
+    background-color: #01DFD7;
+}
+
+#main {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+/* 3-columns */
+#player_box {
+    font-size: 0;      /* #playerと#controllerの隙間をなくすため */
+}
+
+#tabs_container {
+    width: 16rem;
+}
+
+#room_info {
+}
+
+/* #player_box compenents */
+#controller {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    font-size: medium;
+    box-sizing: border-box;
+    width: 575px;
+    background-color: black;
+}
+
+.slider {
+    display: inline-block;
+    position: relative;
+}
+
+.slider div {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 0;
+}
+
+.slider button {
+    position: absolute;
+    visibility: hidden;
+    left: 0;
+    padding: 0;
+    border: none;
+}
+
+.slider button::before {
+    content: "";
+    display: inline-block;
+    visibility: visible;
+    border-radius: 50%;
+}
+
+#seekbar {
+    width: 100%;
+    height: 5px;
+    background-color: gray;
+    transition: transform 300ms 0s ease;
+}
+
+#seekbar div {
+    height: 5px;
+    background-color: #01DFD7;
+}
+
+#seekbar button {
+    top: -5px;
+}
+
+#seekbar button::before {
+    width: 14px;
+    height: 10px;
+    background-color: #01DFD7;
+    transform: scale(0);
+    transition: transform 300ms 0s ease;
+}
+
+#seekbar:hover {
+    transform: scaleY(1.4);
+}
+
+#seekbar:hover button::before {
+    transform: scale(1);
+}
+
+#volume {
+    width: 15%;
+    height: 5px;
+    margin-right: 1rem;
+    background-color: white;
+}
+
+#volume button {
+    top: -5px;
+}
+
+#volume button:before {
+    width: 14px;
+    height: 14px;
+    background-color: white;
+}
+
+#mute_button {
+    box-sizing: border-box;
+    width: 1.5rem;
+    height: 1.2rem;
+    margin-left: auto;
+    margin-right: 0.5rem;
+    border: none;
+    background-color: transparent;
+}
+
+#mute_button::before {
+    font-family: "Font Awesome 5 Free";
+    content: "\f028";
+    font-weight: 900;
+    color: white;    
+}
+
+#mute_button.muted::before {
+    content: "\f026";
+}
+
+#play_pause_button {
+    box-sizing: border-box;
+    width: 1.5rem;
+    height: 1.2rem;
+    margin: 0.5rem;
+    border: none;
+    background-color: transparent;
+}
+
+#play_pause_button::before {
+    font-family: "Font Awesome 5 Free";
+    content: "\f04b";
+    font-weight: 900;
+    color: white;
+}
+
+#play_pause_button.pause::before {
+    content: "\f04c";
+}
+
+#playtime {
+    color: white;
+}
+
+
+/* #tabs_container components */
+.tabs {
+    display: flex;
+    justify-content: space-evenly;
+}
+
+.tabs>label {
+    display: inline-block;
+    width: 5rem;
+    height: 2rem;
+    line-height: 2rem;
+    text-align: center;
+    background-color: #01DFD7;
+    border: solid 1px white;
+    border-bottom: solid 1px #01DFD7;
+}
+
+.tabs>label.selected {
+    background-color: white;
+    border: solid 1px #01DFD7;
+    border-bottom: solid 1px white;
+}
+
+#tabs_container .item {
+    display: none;
+}
+
+#tabs_container .item.selected {
+    display: block;
+}
+
+
+/* #room_info components */
+#users {
+    display: flex;
+    box-sizing: border-box;
+    width: 20rem;
+    height: 4.5rem;
+    margin: 0;
+    padding-left: 1rem;
+    background-color: slategray;
+    font-size: 0.6rem;
+    border: solid 1px silver;
+}
+
+#users li {
+    display: inline-block;
+    box-sizing: border-box;
+    width: 7em;
+    height: 4.5rem;
+    margin: 0 0.5em;
+    padding: 0.5em;
+    border-radius: 10% 10% 0 0;
+    text-align: center;
+}
+
+#users li::before {
+    display: block;
+    font-family: "Font Awesome 5 Free";
+    content: "\f007";
+    font-size: 5em;
+    font-weight: 900;
+    color: slategray;
+}
+
+#users li.you {
+    order: -1;
+    background-color: lightpink;
+}
+
+#users li.other {
+    background-color: palegoldenrod;
+}
+
+#messages {
+    display: flex;
+    box-sizing: border-box;
+    width: 20rem;
+    height: 20rem;
+    overflow-x: hidden;
+    overflow-y: scroll;
+    flex-direction: column;
+    border: solid 1px silver;
+    font-size: 0.8rem;
+}
+
+.message_info {
+    position: relative;
+    margin: 1rem 0;
+    padding: 0 1rem;
+    border-radius: 0.5rem;
+}
+
+.message_info.server {
+    width: 70%;
+    align-self: center;
+    background-color: lavender;
+}
+
+.message_info.server .username {
+    display: none;
+}
+
+.message_info.you {
+    max-width: 70%;
+    align-self: flex-start;
+    margin-left: 1em;
+    background-color: lightpink;
+}
+
+.message_info.you::before {
+    content: "";
+    position: absolute;
+    top: 1rem;
+    left: -2rem;
+    border: 0.5rem solid transparent;
+    border-left: 1rem solid transparent;
+	border-right: 1rem solid lightpink;
+}
+
+.message_info.you .username {
+    display: none;
+}
+
+.message_info.other {
+    max-width: 70%;
+    align-self: flex-end;
+    margin-right: 1rem;
+    background-color: palegoldenrod;
+}
+
+.message_info.other::before {
+    content: "";
+    position: absolute;
+    top: 1rem;
+    right: -2rem;
+    border: 0.5rem solid transparent;
+    border-right: 1rem solid transparent;
+	border-left: 1rem solid palegoldenrod;
+}
+
+form[name="chat"] {
+    display: block;
+    box-sizing: border-box;
+    width: 20rem;
+    padding: 0.5rem 1rem;
+    background-color: slategray;
+}
+
+form[name="chat"] input[name="message"] {
+    box-sizing: border-box;
+    width: 100%;
+    height: 2rem;
+    border-radius: 0.2rem;
+    border: 1px solid silver;
+    padding-left: 0.5rem;
+}
+
